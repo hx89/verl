@@ -10,12 +10,21 @@
 #   - microbatch size = 8 sequences (fixed, no dynamic batching)
 #   - => 4 minibatches/step, 4 microbatches/minibatch, 16 microbatches/step
 #
-# Please run `wandb login` before executing this script.
+# HF_TOKEN and WANDB_API_KEY are read from the environment (not stored in
+# env.sh). Pass them at invocation; a leading space keeps them out of history:
+#    HF_TOKEN=hf_xxx WANDB_API_KEY=yyy ./config_b2_interactive.sh <exp> <mode>
 
 set -xeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "${SCRIPT_DIR}/env.sh" ] && source "${SCRIPT_DIR}/env.sh"
+
+# Require the secrets to be supplied via the environment. Validate with xtrace
+# disabled so the token values are never echoed into the tee'd log.
+{ set +x; } 2>/dev/null
+: "${HF_TOKEN:?not set — pass it at invocation, e.g. HF_TOKEN=hf_xxx WANDB_API_KEY=yyy ./config_b2_interactive.sh <exp> <mode>}"
+: "${WANDB_API_KEY:?not set — pass it at invocation, e.g. HF_TOKEN=hf_xxx WANDB_API_KEY=yyy ./config_b2_interactive.sh <exp> <mode>}"
+set -x
 
 # Driver-side env vars inherited from the reference script. These are also
 # passed to VERL worers via $RAY_KWARGS below.
