@@ -93,8 +93,14 @@ def run_ppo(config, task_runner_class=None) -> None:
         from verl.utils.import_utils import is_nvtx_available
 
         assert is_nvtx_available(), "nvtx is not available in CUDA platform. Please 'pip3 install nvtx'"
-        nsight_options = OmegaConf.to_container(
-            config.global_profiler.global_tool_config.nsys.controller_nsight_options
+        from verl.utils.profiler.nsight_utils import configure_controller_nsight_options
+
+        nsight_options = configure_controller_nsight_options(
+            save_path=config.global_profiler.get("save_path"),
+            controller_nsight_options=OmegaConf.to_container(
+                config.global_profiler.global_tool_config.nsys.controller_nsight_options
+            ),
+            profile_steps=config.global_profiler.get("steps"),
         )
         runner = task_runner_class.options(runtime_env={"nsight": nsight_options}).remote()
     else:

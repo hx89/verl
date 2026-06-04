@@ -853,8 +853,16 @@ class RayPPOTrainer:
                     OmegaConf.select(self.config.global_profiler.global_tool_config.nsys, "worker_nsight_options")
                     is not None
                 ), "worker_nsight_options must be set when using nsys with profile_steps"
-                wg_kwargs["worker_nsight_options"] = OmegaConf.to_container(
-                    OmegaConf.select(self.config.global_profiler.global_tool_config.nsys, "worker_nsight_options")
+                from verl.utils.profiler.nsight_utils import configure_nsight_options
+
+                nsys_tool_config = self.config.global_profiler.global_tool_config.nsys
+                wg_kwargs["worker_nsight_options"] = configure_nsight_options(
+                    save_path=OmegaConf.select(self.config.global_profiler, "save_path"),
+                    worker_nsight_options=OmegaConf.to_container(
+                        OmegaConf.select(nsys_tool_config, "worker_nsight_options")
+                    ),
+                    profile_steps=wg_kwargs["profile_steps"],
+                    discrete=bool(OmegaConf.select(nsys_tool_config, "discrete", default=False)),
                 )
         wg_kwargs["device_name"] = self.device_name
 
@@ -1124,6 +1132,12 @@ class RayPPOTrainer:
                 self.ref_policy_wg.stop_profile()
             if self.use_critic:
                 self.critic_wg.stop_profile()
+            if OmegaConf.select(self.config.global_profiler, "tool") == "nsys":
+                save_path = OmegaConf.select(self.config.global_profiler, "save_path")
+                if save_path:
+                    from verl.utils.profiler.nsight_utils import collect_nsys_profiles
+
+                    collect_nsys_profiles(save_path=save_path, step=self.global_steps)
 
     def _get_dp_size(self, worker_group, role: str) -> int:
         """Get data parallel size from worker group dispatch info.
