@@ -333,13 +333,18 @@ esac
 #   - CUDA_DEVICE_MAX_CONNECTIONS=1: required for correct CUDA stream ordering
 #     with Megatron's overlapped comm/compute; must be set before CUDA init.
 #   - NCCL_NVLS_ENABLE=0: disables NVLink SHARP; read by NCCL at comm init.
+#   - ROCR_VISIBLE_DEVICES='': something in this environment exports the AMD/ROCm
+#     device var even on these NVIDIA nodes. verl raises if both ROCR_* and
+#     CUDA_VISIBLE_DEVICES are set (single_controller/base/worker.py), and Ray
+#     sets CUDA_VISIBLE_DEVICES per actor. Forcing ROCR empty on every worker
+#     makes verl's `if rocr_val:` guard treat it as unset.
 #
 # The override is passed as a single inline dict because `ray_init` is a
 # declared (struct-mode) node in ppo_trainer.yaml, which blocks adding new
 # nested keys via dotted paths. Values are quoted strings because Ray requires
 # env_vars values to be strings.
 
-RAY_KWARGS="+ray_kwargs.ray_init.runtime_env={env_vars:{CUDA_DEVICE_MAX_CONNECTIONS:'1',NCCL_NVLS_ENABLE:'0',HF_HOME:'${HF_HOME}'}}"
+RAY_KWARGS="+ray_kwargs.ray_init.runtime_env={env_vars:{CUDA_DEVICE_MAX_CONNECTIONS:'1',NCCL_NVLS_ENABLE:'0',HF_HOME:'${HF_HOME}',ROCR_VISIBLE_DEVICES:''}}"
 
 # ===================================== Run =====================================
 # Hydra creates outputs/<date>/<time>/ and wandb creates wandb/ relative to
