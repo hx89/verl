@@ -350,6 +350,7 @@ cd "${EXP_DIR}"
 python3 -m verl.trainer.main_ppo \
     --config-path=config \
     --config-name=ppo_megatron_trainer.yaml \
+    hydra.run.dir="${EXP_DIR}/hydra/$(date +%Y-%m-%d/%H-%M-%S)" \
     algorithm.adv_estimator=$adv_estimator \
     algorithm.use_kl_in_reward=$use_kl_in_reward \
     algorithm.kl_ctrl.kl_coef=$kl_coef \
