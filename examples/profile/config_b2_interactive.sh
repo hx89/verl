@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# config_b2: Mid-batch-size GRPO on a single 4-GPU node with
+# config_b2: Mid-batch-size GRPO on a single 8xH100 DGX node with
 # Qwen3-30B-A3B-Base on gsm8k. The second (and last) profileable point in the
 # host offloading study.
 #
@@ -39,7 +39,7 @@ mkdir -p $HF_HOME
 
 # ===================================== Topology =====================================
 NNODES=1
-GPUS_PER_NODE=4
+GPUS_PER_NODE=8
 
 # ===================================== Output / metadata =====================================
 # Experiment name: first positional arg (base name). Profiling mode: second arg
@@ -142,9 +142,8 @@ infer_logprob_micro_batch_size_per_gpu=${ppo_micro_batch_size_per_gpu}
 
 
 # ===================================== Megatron actor =====================================
-# TP=4,EP=4,ETP=1,PP=1 on a single 4-GPU node. world_size=4=TP*CP*PP*DP so DP=1
-# (same as the 8-GPU run, so the GRPO batch/micro-batch math is unchanged); the
-# expert grid satisfies EP*ETP=4=TP*CP*DP. Scaled down from the 8-GPU TP=8,EP=8.
+# TP=8,EP=8,ETP=1,PP=1. Moves from the upstream 4-node TP=1,EP=8 layout to a
+# single-node TP=8,EP=8 layout.
 #
 # A note about host offloading: The offloading flags DO NOT correspond to
 # pipelined offloading during the train step, but to coarse-grained offloading
@@ -160,11 +159,11 @@ infer_logprob_micro_batch_size_per_gpu=${ppo_micro_batch_size_per_gpu}
 # ship a separate megatron implementation for every model.
 
 OFFLOAD=True
-TP_SIZE=4
+TP_SIZE=8
 CP_SIZE=1
 PP_SIZE=1
 VPP_SIZE=null   # Circular repeat; not compatible with mbridge so set to null.
-EP_SIZE=4
+EP_SIZE=8
 ETP_SIZE=1
 
 ACTOR_MEGATRON_CONFIG="
@@ -224,8 +223,8 @@ REF_CONFIG="
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$infer_logprob_micro_batch_size_per_gpu"
 
 # ===================================== Inference (vLLM) =====================================
-# TP=4 for inference (gen_tp). Colocated with the actor; with 4 GPUs total this
-# is a single vLLM replica spanning all GPUs (the 8-GPU run had two replicas).
+# TP=4 for inference (gen_tp). Colocated with the actor — VERL will fill the
+# remaining GPUs with a second vLLM replica.
 #
 # MoE layout (vLLM): enable expert parallel with EP=TP. VERL requires
 # expert_parallel_size == tensor_model_parallel_size * data_parallel_size.
