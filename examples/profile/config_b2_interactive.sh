@@ -166,6 +166,19 @@ VPP_SIZE=null   # Circular repeat; not compatible with mbridge so set to null.
 EP_SIZE=8
 ETP_SIZE=1
 
+# MoE token dispatcher. The DeepEP all-to-all kernels prebuilt in the
+# verlai/verl image are NOT compiled for B200/SM100 — DeepEP's
+# get_dispatch_layout raises CUDA 'named symbol not found' on Blackwell. Default
+# to Megatron's alltoall dispatcher (grouped GEMM stays on) so the run works
+# here; set USE_DEEPEP=1 to restore the DeepEP/flex path once a B200-built
+# DeepEP + NVSHMEM is available.
+USE_DEEPEP="${USE_DEEPEP:-0}"
+if [[ "${USE_DEEPEP}" == "1" ]]; then
+    MOE_DISPATCHER_CONFIG="+actor_rollout_ref.actor.megatron.override_transformer_config.moe_enable_deepep=True +actor_rollout_ref.actor.megatron.override_transformer_config.moe_token_dispatcher_type=flex"
+else
+    MOE_DISPATCHER_CONFIG="+actor_rollout_ref.actor.megatron.override_transformer_config.moe_token_dispatcher_type=alltoall"
+fi
+
 ACTOR_MEGATRON_CONFIG="
     actor_rollout_ref.actor.megatron.tensor_model_parallel_size=$TP_SIZE \
     actor_rollout_ref.actor.megatron.context_parallel_size=$CP_SIZE \
@@ -179,8 +192,7 @@ ACTOR_MEGATRON_CONFIG="
     actor_rollout_ref.actor.megatron.use_mbridge=True \
     +actor_rollout_ref.actor.megatron.override_transformer_config.apply_rope_fusion=True \
     +actor_rollout_ref.actor.megatron.override_transformer_config.moe_router_dtype=fp32 \
-    +actor_rollout_ref.actor.megatron.override_transformer_config.moe_enable_deepep=True \
-    +actor_rollout_ref.actor.megatron.override_transformer_config.moe_token_dispatcher_type=flex \
+    ${MOE_DISPATCHER_CONFIG} \
     +actor_rollout_ref.actor.megatron.override_transformer_config.recompute_method=uniform \
     +actor_rollout_ref.actor.megatron.override_transformer_config.recompute_granularity=full \
     +actor_rollout_ref.actor.megatron.override_transformer_config.recompute_num_layers=1 \
