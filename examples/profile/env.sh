@@ -36,6 +36,7 @@ export OUT_DIR="${VERL_EXP_ROOT}/logs"
 # launched so the wandb log is accurate.
 export VERL_CONTAINER_IMAGE="verlai/verl:vllm017.latest"
 
+export USE_DEEPEP=1
 # -------- Secrets --------
 # HF_TOKEN and WANDB_API_KEY are intentionally NOT stored here. Pass them in
 # the environment at invocation instead (a leading space keeps them out of
